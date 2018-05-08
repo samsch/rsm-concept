@@ -1,27 +1,33 @@
 import React from 'react';
+import Kefir from 'kefir';
 import Atom from 'kefir.atom';
 import * as R from 'ramda';
 
+export const initializationAction = {};
 const RsmContext = React.createContext();
 
 export const createStore = (initialState, debugging = false) => {
+  const actionStream = Kefir.pool();
   const state = new Atom(initialState);
   // Synchronous calls to dispatch will only cause one update event on the next tick.
 
-  // Queuing version
   let actionQueue = [];
   let modifyQueued = false;
   const modify = () => {
     modifyQueued = false;
     const currentActions = actionQueue.slice();
     actionQueue = [];
-    state.modify(R.pipe(...currentActions));
+    state.modify(R.pipe(...currentActions.map(a => a.action)));
+    currentActions.forEach((action) => {
+      actionStream.plug(Kefir.constant(action));
+    });
   };
-  const dispatch = action => {
+  const dispatch = (action, ref, args) => {
+
     if (debugging) {
-      console.log('Action', action);
+      console.log('Action', ref);
     }
-    actionQueue.push(action);
+    actionQueue.push({ action, ref, args });
     if (!modifyQueued) {
       modifyQueued = true;
       setTimeout(modify);
@@ -35,6 +41,7 @@ export const createStore = (initialState, debugging = false) => {
   const updates = state.changes();
   return {
     dispatch,
+    actionStream,
     property: state,
     // TODO test unsubscribe
     subscribe: f => updates.observe({ value: f }).unsubscribe,
@@ -65,10 +72,15 @@ class State extends React.Component {
     super(props);
     this.updateState = this.updateState.bind(this);
     this.getLens = this.getLens.bind(this);
+    this.getActions = this.getActions.bind(this);
     const setState = currentState => {
       const current = R.view(this.getLens(), currentState);
       if (current === undefined) {
-        this.props.store.dispatch(R.set(this.getLens(), this.props.initialState));
+        this.props.store.dispatch(
+          R.set(this.getLens(), this.props.initialState),
+          initializationAction,
+          [this.props.initialState, this.props.lens]
+        );
         this.state = {
           state: this.props.initialState,
           // actions: this.makeActions(),
@@ -80,8 +92,9 @@ class State extends React.Component {
         };
       }
     };
-    this.props.store.property.onValue(setState);
-    this.props.store.property.offValue(setState);
+    this.props.store.property.observe({
+      value: setState,
+    }).unsubscribe();
   }
   getLens () {
     if (this.lastPath !== this.props.lens || !this.lens) {
@@ -97,7 +110,7 @@ class State extends React.Component {
         const action = func(...args);
         // The Object.assign here puts any extra properties of the function and adds them to the root dispatched.
         // action. This allows for potentially using such properties for saga-like stuff.
-        return this.props.store.dispatch(Object.assign(R.over(this.getLens(), action), action));
+        return this.props.store.dispatch(R.over(this.getLens(), action), func, args);
       };
       return actions;
     }, {});
@@ -111,9 +124,13 @@ class State extends React.Component {
   }
   componentDidMount () {
     this.unsubscribe = this.props.store.subscribe(this.updateState);
+    if (this.props.saga) {
+      this.killSaga = this.props.saga({ actionStream: this.props.store.actionStream, getActions: this.getActions });
+    }
   }
   componentWillUnmount () {
     this.unsubscribe();
+    this.killSaga();
   }
   render () {
     console.log('Render Count', stateRenders++);

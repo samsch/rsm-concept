@@ -1,9 +1,27 @@
 import React from 'react';
 import { makeStateComponent } from './rsm';
 
+const event = () => () => s => s;
+
 const actions = {
   increment: () => state => ({ count: state.count + 1 }),
+  incrementEveryOther: event(),
   decrement: () => state => ({ count: state.count - 1 }),
+};
+
+const saga = ({ actionStream, getActions }) => {
+  let even = true;
+  const { kill } = actionStream.observe({
+    value: ({ ref }) => {
+      if (ref === actions.incrementEveryOther) {
+        if (even) {
+          getActions().increment();
+        }
+        even = !even;
+      }
+    },
+  });
+  return kill;
 };
 
 const initialState = { count: 0 };
@@ -11,7 +29,7 @@ const initialState = { count: 0 };
 const State = makeStateComponent({ actions });
 
 const Counter = props => (
-  <State initialState={initialState} lens={props.lens || ['defaultCounter']}>
+  <State initialState={initialState} saga={saga} lens={props.lens || ['defaultCounter']}>
     {(state, actions) => (//console.log('Counter Render', state, props),
       <div className="row">
         <div className="col-auto">
@@ -21,7 +39,7 @@ const Counter = props => (
           <button
             type="button"
             className="btn btn-outline-warning"
-            onClick={actions.increment}
+            onClick={actions.incrementEveryOther}
           >+1</button>
           <button
             type="button"
