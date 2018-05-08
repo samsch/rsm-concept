@@ -103,15 +103,17 @@ class State extends React.Component {
     }
     return this.lens;
   }
+  callAction (func, args = []) {
+    const action = func(...args);
+    this.props.store.dispatch(R.over(this.getLens(), action), func, args);
+    if (this.localActionStream) {
+      this.localActionStream.plug(Kefir.constant({ ref: func, args }));
+    }
+  }
   getActions () {
     // Actions should be cached based on the lens and actions props as the key.
     return Object.entries(this.props.actions || {}).reduce((actions, [name, func]) => {
-      actions[name] = (...args) => {
-        const action = func(...args);
-        // The Object.assign here puts any extra properties of the function and adds them to the root dispatched.
-        // action. This allows for potentially using such properties for saga-like stuff.
-        return this.props.store.dispatch(R.over(this.getLens(), action), func, args);
-      };
+      actions[name] = (...args) => this.callAction(func, args);
       return actions;
     }, {});
   }
@@ -125,12 +127,25 @@ class State extends React.Component {
   componentDidMount () {
     this.unsubscribe = this.props.store.subscribe(this.updateState);
     if (this.props.saga) {
-      this.killSaga = this.props.saga({ actionStream: this.props.store.actionStream, getActions: this.getActions });
+      this.localActionStream = Kefir.pool();
+      this.sagaActionBuffer = this.localActionStream.bufferBy(this.props.store.property).flatten();
+      this.sagaActionBuffer.log();
+      const killSaga = this.props.saga({
+        actionStream: this.sagaActionBuffer,
+        globalActionStream: this.props.store.actionStream,
+        callAction: this.callAction.bind(this),
+      });
+      this.killSaga = () => {
+        killSaga();
+      };
     }
   }
   componentWillUnmount () {
-    this.unsubscribe();
-    this.killSaga();
+    [this.unsubscribe, this.killSaga].forEach(f => {
+      if (typeof f === 'function') {
+        f();
+      }
+    });
   }
   render () {
     console.log('Render Count', stateRenders++);

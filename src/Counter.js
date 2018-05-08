@@ -9,17 +9,17 @@ const actions = {
   decrement: () => state => ({ count: state.count - 1 }),
 };
 
-const saga = ({ actionStream, getActions }) => {
+const saga = ({ actionStream, callAction }) => {
   let even = true;
   const { unsubscribe } = actionStream.observe({
     value: ({ ref }) => {
       if (ref === actions.incrementEveryOther) {
         if (even) {
-          getActions().increment();
+          callAction(actions.increment);
         }
         even = !even;
       }
-    },
+    }
   });
   return unsubscribe;
 };
@@ -40,7 +40,7 @@ const Counter = props => (
             type="button"
             className="btn btn-outline-warning"
             onClick={actions.incrementEveryOther}
-          >+1</button>
+          >+1 every other</button>
           <button
             type="button"
             className="btn btn-outline-warning"
