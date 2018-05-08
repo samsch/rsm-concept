@@ -129,7 +129,6 @@ class State extends React.Component {
     if (this.props.saga) {
       this.localActionStream = Kefir.pool();
       this.sagaActionBuffer = this.localActionStream.bufferBy(this.props.store.property).flatten();
-      this.sagaActionBuffer.log();
       const killSaga = this.props.saga({
         actionStream: this.sagaActionBuffer,
         globalActionStream: this.props.store.actionStream,
