@@ -11,7 +11,7 @@ const actions = {
 
 const saga = ({ actionStream, getActions }) => {
   let even = true;
-  const { kill } = actionStream.observe({
+  const { unsubscribe } = actionStream.observe({
     value: ({ ref }) => {
       if (ref === actions.incrementEveryOther) {
         if (even) {
@@ -21,7 +21,7 @@ const saga = ({ actionStream, getActions }) => {
       }
     },
   });
-  return kill;
+  return unsubscribe;
 };
 
 const initialState = { count: 0 };
