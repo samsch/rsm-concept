@@ -2,6 +2,12 @@ import React from 'react';
 import Kefir from 'kefir';
 import Atom from 'kefir.atom';
 import * as R from 'ramda';
+import saga from './saga';
+
+const singleValue = value => Kefir.stream(emitter => {
+  emitter.emit(value);
+  emitter.end();
+});
 
 export const initializationAction = {};
 const RsmContext = React.createContext();
@@ -19,7 +25,7 @@ export const createStore = (initialState, debugging = false) => {
     actionQueue = [];
     state.modify(R.pipe(...currentActions.map(a => a.action)));
     currentActions.forEach((action) => {
-      actionStream.plug(Kefir.constant(action));
+      actionStream.plug(singleValue(action));
     });
   };
   const dispatch = (action, ref, args) => {
@@ -105,10 +111,10 @@ class State extends React.Component {
   }
   callAction (func, args = []) {
     const action = func(...args);
-    this.props.store.dispatch(R.over(this.getLens(), action), func, args);
     if (this.localActionStream) {
-      this.localActionStream.plug(Kefir.constant({ ref: func, args }));
+      this.localActionStream.plug(singleValue({ ref: func, args }));
     }
+    this.props.store.dispatch(R.over(this.getLens(), action), func, args);
   }
   getActions () {
     // Actions should be cached based on the lens and actions props as the key.
@@ -129,18 +135,16 @@ class State extends React.Component {
     if (this.props.saga) {
       this.localActionStream = Kefir.pool();
       this.sagaActionBuffer = this.localActionStream.bufferBy(this.props.store.property).flatten();
-      const killSaga = this.props.saga({
-        actionStream: this.sagaActionBuffer,
-        globalActionStream: this.props.store.actionStream,
-        callAction: this.callAction.bind(this),
-      });
-      this.killSaga = () => {
-        killSaga();
-      };
+      this.endSaga = saga(
+        this.props.saga,
+        this.sagaActionBuffer.changes(),
+        this.props.store.property,
+        this.callAction.bind(this)
+      );
     }
   }
   componentWillUnmount () {
-    [this.unsubscribe, this.killSaga].forEach(f => {
+    [this.unsubscribe, this.endSaga].forEach(f => {
       if (typeof f === 'function') {
         f();
       }

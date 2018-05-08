@@ -7,21 +7,17 @@ const actions = {
   increment: () => state => ({ count: state.count + 1 }),
   incrementEveryOther: event(),
   decrement: () => state => ({ count: state.count - 1 }),
+  slowIncrement: event(),
 };
 
-const saga = ({ actionStream, callAction }) => {
-  let even = true;
-  const { unsubscribe } = actionStream.observe({
-    value: ({ ref }) => {
-      if (ref === actions.incrementEveryOther) {
-        if (even) {
-          callAction(actions.increment);
-        }
-        even = !even;
-      }
-    }
-  });
-  return unsubscribe;
+// Add slowIncrement saga.
+
+const saga = function * ({ take, callAction }) {
+  while (true) {
+    yield take(actions.incrementEveryOther);
+    yield take(actions.incrementEveryOther);
+    yield callAction(actions.increment);
+  }
 };
 
 const initialState = { count: 0 };
