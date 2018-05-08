@@ -6,7 +6,10 @@ import Counter from './Counter';
 
 const store = createStore({}, true);
 
-window.store = store;
+if (process.env.NODE_ENV === 'development') {
+  // Console/debugging access to the store.
+  window.store = store;
+}
 
 ReactDOM.render(
   <Rsm store={store}>
