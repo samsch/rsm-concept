@@ -1,4 +1,5 @@
 import React from 'react';
+import Promise from 'bluebird';
 import { makeStateComponent } from './rsm';
 
 const event = () => () => s => s;
@@ -11,8 +12,16 @@ const actions = {
 };
 
 // Add slowIncrement saga.
+const slowIncrementSaga = function * ({ take, call, callAction }) {
+  while (true) {
+    yield take(actions.slowIncrement);
+    yield call(Promise.delay(1000));
+    yield callAction(actions.increment);
+  }
+};
 
-const saga = function * ({ take, callAction }) {
+const saga = function * ({ take, callAction, run }) {
+  yield run(slowIncrementSaga);
   while (true) {
     yield take(actions.incrementEveryOther);
     yield take(actions.incrementEveryOther);
@@ -42,6 +51,11 @@ const Counter = props => (
             className="btn btn-outline-warning"
             onClick={actions.decrement}
           >-1</button>
+          <button
+            type="button"
+            className="btn btn-outline-warning"
+            onClick={actions.slowIncrement}
+          >Delayed +1</button>
         </div>
       </div>
     )}

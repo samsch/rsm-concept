@@ -4,12 +4,14 @@ const take = ref => ({ type: 'take', ref });
 const takeEveryEffect = (ref, saga) => ({ type: 'takeEvery', ref, saga });
 const call = promise => ({ type: 'promise', promise });
 const callActionEffect = (action, args) => ({ type: 'callAction', action, args });
+const run = saga => ({ type: 'runSaga', saga });
 
 const effects = {
   take,
   takeEvery: takeEveryEffect,
   call,
   callAction: callActionEffect,
+  run,
 };
 
 async function takeOne (observable, ref) {
@@ -43,7 +45,6 @@ function takeEvery (ref, saga, localActionStream, globalStateProperty, callActio
 }
 
 export default function Saga (saga, localActionStream, globalStateProperty, callAction, initial) {
-  localActionStream.spy('localActionStream.buffer.changes');
   const running = saga(effects);
   // TODO children processes is not at all tested yet.
   const children = [];
@@ -57,10 +58,10 @@ export default function Saga (saga, localActionStream, globalStateProperty, call
       return;
     }
     switch (message.value.type) {
-      // TODO Call effect is not yet tested.
-      case 'call':
+      case 'promise':
         message.value.promise.then(value => {
           runSaga(value);
+          return null;
         })
         .catch(error => {
           running.throw(error);
@@ -90,7 +91,7 @@ export default function Saga (saga, localActionStream, globalStateProperty, call
             globalStateProperty,
             callAction
           );
-          children.concat(stopChild);
+          children.push(stopChild);
           runSaga({ stopChild: () => {
             const index = children.indexOf(stopChild);
             children.splice(index, 1);
@@ -111,6 +112,16 @@ export default function Saga (saga, localActionStream, globalStateProperty, call
           });
         callAction(message.value.action, message.value.args);
         break;
+      case 'runSaga':
+        (() => {
+          const stopChild = Saga(message.value.saga, localActionStream, globalStateProperty, callAction, initial);
+          children.push(stopChild);
+          runSaga({ stopChild: () => {
+            const index = children.indexOf(stopChild);
+            children.splice(index, 1);
+            stopChild();
+          }});
+        })();
     }
   };
   runSaga(initial);

@@ -151,7 +151,7 @@ class State extends React.Component {
     });
   }
   render () {
-    console.log('Render Count', stateRenders++);
+    // console.log('Render Count', stateRenders++);
     // console.log('State render', this.state.state);
     return this.props.children(this.state.state, this.getActions());
   }
