@@ -46,7 +46,6 @@ function takeEvery (ref, saga, localActionStream, globalStateProperty, callActio
 
 export default function Saga (saga, localActionStream, globalStateProperty, callAction, initial) {
   const running = saga(effects);
-  // TODO children processes is not at all tested yet.
   const children = [];
   let stopped = false;
   const runSaga = (...args) => {
@@ -125,6 +124,7 @@ export default function Saga (saga, localActionStream, globalStateProperty, call
     }
   };
   runSaga(initial);
+  // TODO stopping processes is untested.
   return (stopError) => {
     const stopping = stopError || new Error('Saga stopped');
     stopping.stopError = true;

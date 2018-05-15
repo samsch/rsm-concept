@@ -1,8 +1,10 @@
+import 'babel-polyfill';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { createStore, Rsm, AllState } from './rsm';
 import Todo from './Todo';
 import Counter from './Counter';
+import ComplexCounter from './ComplexCounter';
 
 const store = createStore({}, true);
 
@@ -20,6 +22,7 @@ ReactDOM.render(
       <Counter />
       <Counter name="Count X" lens={['counterX']} />
       <Counter name="Count Y" lens={['counterY']} />
+      <ComplexCounter />
       <AllState>
         {(state) => (
           <div>

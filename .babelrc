@@ -16,6 +16,7 @@
     ]
   ],
   "plugins": [
+    "ramda",
     "syntax-dynamic-import",
     "transform-object-rest-spread"
   ],
