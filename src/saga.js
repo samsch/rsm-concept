@@ -1,5 +1,3 @@
-import Promise from 'bluebird';
-
 const take = ref => ({ type: 'take', ref });
 const takeEveryEffect = (ref, saga) => ({ type: 'takeEvery', ref, saga });
 const call = promise => ({ type: 'promise', promise });

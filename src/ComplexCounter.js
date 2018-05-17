@@ -1,5 +1,4 @@
 import React from 'react';
-import Promise from 'bluebird';
 import { makeStateComponent } from './rsm';
 
 const event = () => () => s => s;
