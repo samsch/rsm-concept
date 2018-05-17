@@ -1,6 +1,5 @@
 import React from 'react';
-import Kefir from 'kefir';
-import Atom from 'kefir.atom';
+import Kefir from 'kefir/dist/kefir.min.js';
 import * as R from 'ramda';
 import saga from './saga';
 
@@ -14,7 +13,11 @@ const RsmContext = React.createContext();
 
 export const createStore = (initialState, debugging = false) => {
   const actionStream = Kefir.pool();
-  const state = new Atom(initialState);
+  const applyActionStream = Kefir.pool();
+  const state = applyActionStream.scan((state, actions) => {
+    return R.pipe(...actions.map(a => a.action))(state);
+  }, initialState);
+  // applyActionStream.plug(singleValue([() => initialState]));
   // Synchronous calls to dispatch will only cause one update event on the next tick.
 
   let actionQueue = [];
@@ -23,13 +26,13 @@ export const createStore = (initialState, debugging = false) => {
     modifyQueued = false;
     const currentActions = actionQueue.slice();
     actionQueue = [];
-    state.modify(R.pipe(...currentActions.map(a => a.action)));
+    applyActionStream.plug(singleValue(currentActions));
+    // state.modify(R.pipe(...currentActions.map(a => a.action)));
     currentActions.forEach((action) => {
       actionStream.plug(singleValue(action));
     });
   };
   const dispatch = (action, ref, args) => {
-
     if (debugging) {
       console.log('Action', ref);
     }
@@ -44,13 +47,13 @@ export const createStore = (initialState, debugging = false) => {
       console.log('Next State', v);
     });
   }
-  const updates = state.changes();
+  const changes = state.changes();
   return {
     dispatch,
     actionStream,
     property: state,
     // TODO test unsubscribe
-    subscribe: f => updates.observe({ value: f }).unsubscribe,
+    subscribe: f => changes.observe({ value: f }).unsubscribe,
   };
 };
 
@@ -151,7 +154,7 @@ class State extends React.Component {
     });
   }
   render () {
-    // console.log('Render Count', stateRenders++);
+    console.log('Render Count', stateRenders++);
     // console.log('State render', this.state.state);
     return this.props.children(this.state.state, this.getActions());
   }
