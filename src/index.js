@@ -1,7 +1,7 @@
 import 'babel-polyfill';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { createStore, Rsm, AllState } from './rsm';
+import { createStore, Rsm, AllState } from '@samsch/rsm';
 import Todo from './Todo';
 import Counter from './Counter';
 import ComplexCounter from './ComplexCounter';

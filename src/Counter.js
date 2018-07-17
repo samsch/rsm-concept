@@ -1,5 +1,5 @@
 import React from 'react';
-import { makeStateComponent } from './rsm';
+import { makeStateComponent } from '@samsch/rsm';
 
 const actions = {
   increment: () => state => ({ count: state.count + 1 }),

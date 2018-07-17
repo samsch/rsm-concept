@@ -1,5 +1,5 @@
 import React from 'react';
-import { makeStateComponent } from './rsm';
+import { makeStateComponent } from '@samsch/rsm';
 
 const event = () => () => s => s;
 
@@ -15,7 +15,9 @@ const actions = {
 const slowIncrementSaga = function * ({ take, call, callAction }) {
   while (true) {
     yield take(actions.slowIncrement);
-    yield call(Promise.delay(1000));
+    yield call(new Promise(res => {
+      setTimeout(() => res(), 1000);
+    }));
     yield callAction(actions.increment);
   }
 };
@@ -38,14 +40,18 @@ const doubleIncrementSaga = function * ({ take, takeEvery, callAction }) {
   }
 };
 
-const saga = function * ({ take, callAction, run }) {
-  yield run(slowIncrementSaga);
-  yield run(doubleIncrementSaga);
+const incrementEveryOtherSaga = function * ({ take, callAction }) {
   while (true) {
     yield take(actions.incrementEveryOther);
     yield take(actions.incrementEveryOther);
     yield callAction(actions.increment);
   }
+};
+
+const saga = function * ({ run }) {
+  yield run(slowIncrementSaga);
+  yield run(doubleIncrementSaga);
+  yield run(incrementEveryOtherSaga);
 };
 
 const initialState = { count: 0 };

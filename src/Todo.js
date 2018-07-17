@@ -1,6 +1,6 @@
 import React from 'react';
 import * as R from 'ramda';
-import { makeStateComponent } from './rsm';
+import { makeStateComponent } from '@samsch/rsm';
 
 let id = 0;
 const actions = {
